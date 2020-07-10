@@ -1,13 +1,36 @@
-import React from 'react';
-import { getTweets, resetDatabase } from '../api/TwitterAPI';
-import { Tweet } from '../api/types';
-import { TwitterFeed } from './TwitterFeed';
-import styles from './styles.module.css';
+import React from "react";
+import { getTweets, resetDatabase } from "../api/TwitterAPI";
+import { Tweet } from "../api/types";
+import { TwitterFeed } from "./TwitterFeed";
+import styles from "./styles.module.css";
 
 export default function App() {
   const [tweets, setTweets] = React.useState<Tweet[]>([]);
+  const [scrollY, setScrollY] = React.useState<number>(0);
 
   React.useEffect(() => {
+    window.addEventListener("scroll", () => {
+      setScrollY(window.scrollY);
+    });
+  }, []);
+
+  React.useEffect(() => {
+    if (
+      window.innerHeight + scrollY >= document.body.scrollHeight &&
+      tweets.length > 0
+    ) {
+      const lastTweet = tweets[tweets.length - 1];
+      (async () => {
+        const fetchedTweets = await getTweets(undefined, lastTweet.id);
+        setTweets((prevTweets: Tweet[]) => [...prevTweets, ...fetchedTweets]);
+      })();
+      return;
+    }
+
+    if (scrollY > 0) {
+      return;
+    }
+
     const timer = setTimeout(async () => {
       let lastFetchedTweetId;
 
@@ -35,7 +58,7 @@ export default function App() {
       setTweets((prevTweets: Tweet[]) => [...fetchedTweets, ...prevTweets]);
     }, 2e3);
     return () => clearTimeout(timer);
-  }, [tweets]);
+  }, [tweets, scrollY]);
 
   return (
     <div className={styles.appWrapper}>
